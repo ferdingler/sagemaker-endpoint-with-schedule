@@ -1,0 +1,23 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Image Classification
+
+  '
+Globals:
+  Function:
+    Timeout: 10
+Resources:
+  RecognizeFunction:
+    Properties:
+      CodeUri: s3://fdingler-sam-artifacts/1307538527064bc6ae871107d4197250
+      Events:
+        API:
+          Properties:
+            Method: post
+            Path: /recognize
+          Type: Api
+      Handler: app.handler
+      Policies:
+      - AmazonSageMakerFullAccess
+      Runtime: nodejs8.10
+    Type: AWS::Serverless::Function
+Transform: AWS::Serverless-2016-10-31

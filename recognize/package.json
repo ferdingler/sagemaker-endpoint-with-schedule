@@ -1,0 +1,21 @@
+{
+  "name": "fdingler-image-recognition",
+  "version": "1.0.0",
+  "description": "Image classification backed by SageMaker",
+  "main": "src/index.js",
+  "repository": "https://github.com/aws-samples/cookiecutter-aws-sam-hello-nodejs",
+  "author": "Fernando Dingler",
+  "license": "MIT",
+  "dependencies": {
+    "aws-sdk": "^2.368.0",
+    "axios": "^0.18.0",
+    "lodash": "^4.17.11"
+  },
+  "scripts": {
+    "test": "mocha tests/unit/"
+  },
+  "devDependencies": {
+    "chai": "^4.1.2",
+    "mocha": "^5.1.1"
+  }
+}

@@ -1,0 +1,1 @@
+sam deploy --template-file ./packaged.yaml --stack-name fdingler-image-classification --capabilities CAPABILITY_IAM

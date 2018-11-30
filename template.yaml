@@ -1,0 +1,24 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Image Classification
+
+Globals:
+  Function:
+    Timeout: 10
+
+Resources:
+  RecognizeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: recognize/
+      Handler: app.handler
+      Runtime: nodejs8.10
+      Policies:
+        - AmazonSageMakerFullAccess
+      Events:
+        API:
+          Type: Api
+          Properties:
+            Path: /recognize
+            Method: post
