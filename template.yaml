@@ -16,6 +16,8 @@ Resources:
       Runtime: nodejs8.10
       Policies:
         - AmazonSageMakerFullAccess
+        - AWSXrayFullAccess
+      Tracing: Active
       Events:
         API:
           Type: Api

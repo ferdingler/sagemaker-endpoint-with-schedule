@@ -8,7 +8,7 @@ Globals:
 Resources:
   RecognizeFunction:
     Properties:
-      CodeUri: s3://fdingler-sam-artifacts/1307538527064bc6ae871107d4197250
+      CodeUri: s3://fdingler-sam-artifacts/393063cb5981da2c4c9ff2be14f3eead
       Events:
         API:
           Properties:
@@ -18,6 +18,8 @@ Resources:
       Handler: app.handler
       Policies:
       - AmazonSageMakerFullAccess
+      - AWSXrayFullAccess
       Runtime: nodejs8.10
+      Tracing: Active
     Type: AWS::Serverless::Function
 Transform: AWS::Serverless-2016-10-31

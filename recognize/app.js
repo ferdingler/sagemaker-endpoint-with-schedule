@@ -1,9 +1,11 @@
 const axios = require('axios');
-const AWS = require('aws-sdk');
 const _ = require('lodash');
+const AWSXRay = require('aws-xray-sdk');
+const AWS = AWSXRay.captureAWS(require('aws-sdk'));
 
 const { categories } = require('./categories');
 const sageMaker = new AWS.SageMakerRuntime();
+
 
 const loadImageFromUrl = async (url) => {
   const imageResponse = await axios({
