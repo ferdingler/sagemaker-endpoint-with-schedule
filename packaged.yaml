@@ -4,11 +4,15 @@ Description: 'Image Classification
   '
 Globals:
   Function:
+    Runtime: nodejs8.10
     Timeout: 10
 Resources:
   RecognizeFunction:
     Properties:
-      CodeUri: s3://fdingler-sam-artifacts/393063cb5981da2c4c9ff2be14f3eead
+      CodeUri: s3://fdingler-sam-artifacts/cba806a9e3e2a83a473f81fb5c7bab7c
+      Environment:
+        Variables:
+          SAGE_MAKER_ENDPOINT: mantis-image-classification-endpoint
       Events:
         API:
           Properties:
@@ -19,7 +23,39 @@ Resources:
       Policies:
       - AmazonSageMakerFullAccess
       - AWSXrayFullAccess
-      Runtime: nodejs8.10
       Tracing: Active
+    Type: AWS::Serverless::Function
+  StartEndpoint:
+    Properties:
+      CodeUri: s3://fdingler-sam-artifacts/cba806a9e3e2a83a473f81fb5c7bab7c
+      Environment:
+        Variables:
+          SAGE_MAKER_ENDPOINT: mantis-image-classification-endpoint
+          SAGE_MAKER_ENDPOINT_CONFIG: mantis-image-classification-endpoint-configuration-v2
+      Events:
+        Cron:
+          Properties:
+            Schedule: cron(0 15 * * ? *)
+          Type: Schedule
+      Handler: cron.startEndpoint
+      Policies:
+      - AmazonSageMakerFullAccess
+      Timeout: 60
+    Type: AWS::Serverless::Function
+  StopEndpoint:
+    Properties:
+      CodeUri: s3://fdingler-sam-artifacts/cba806a9e3e2a83a473f81fb5c7bab7c
+      Environment:
+        Variables:
+          SAGE_MAKER_ENDPOINT: mantis-image-classification-endpoint
+      Events:
+        Cron:
+          Properties:
+            Schedule: cron(0 7 * * ? *)
+          Type: Schedule
+      Handler: cron.stopEndpoint
+      Policies:
+      - AmazonSageMakerFullAccess
+      Timeout: 60
     Type: AWS::Serverless::Function
 Transform: AWS::Serverless-2016-10-31

@@ -5,6 +5,7 @@ const AWS = AWSXRay.captureAWS(require('aws-sdk'));
 
 const { categories } = require('./categories');
 const sageMaker = new AWS.SageMakerRuntime();
+const sageMakerEndpoint = process.env['SAGE_MAKER_ENDPOINT'];
 
 
 const loadImageFromUrl = async (url) => {
@@ -19,7 +20,7 @@ const loadImageFromUrl = async (url) => {
 const invokeSageMaker = async (payload) => {
   const inference = await sageMaker.invokeEndpoint({
     Body: payload,
-    EndpointName: 'DEMO-imageclassification-ep--2018-11-30-05-01-32',
+    EndpointName: sageMakerEndpoint,
     ContentType: 'application/x-image',
   }).promise();
 

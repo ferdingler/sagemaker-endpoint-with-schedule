@@ -1,5 +1,5 @@
 {
-  "name": "fdingler-image-recognition",
+  "name": "fdingler-mantis-image-recognition",
   "version": "1.0.0",
   "description": "Image classification backed by SageMaker",
   "main": "src/index.js",

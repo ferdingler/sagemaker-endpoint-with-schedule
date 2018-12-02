@@ -5,22 +5,60 @@ Description: >
 
 Globals:
   Function:
+    Runtime: nodejs8.10
     Timeout: 10
 
 Resources:
   RecognizeFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: recognize/
-      Handler: app.handler
-      Runtime: nodejs8.10
+      CodeUri: lambda/
+      Handler: recognize.handler
       Policies:
         - AmazonSageMakerFullAccess
         - AWSXrayFullAccess
       Tracing: Active
+      Environment:
+        Variables:
+          SAGE_MAKER_ENDPOINT: 'mantis-image-classification-endpoint'
       Events:
         API:
           Type: Api
           Properties:
             Path: /recognize
             Method: post
+
+  StopEndpoint:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambda/
+      Handler: cron.stopEndpoint
+      Timeout: 60
+      Policies:
+      - AmazonSageMakerFullAccess
+      Environment:
+        Variables:
+          SAGE_MAKER_ENDPOINT: 'mantis-image-classification-endpoint'
+      Events:
+        Cron:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 7 * * ? *)
+
+  StartEndpoint:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambda/
+      Handler: cron.startEndpoint
+      Timeout: 60
+      Policies:
+      - AmazonSageMakerFullAccess
+      Environment:
+        Variables:
+          SAGE_MAKER_ENDPOINT: 'mantis-image-classification-endpoint'
+          SAGE_MAKER_ENDPOINT_CONFIG: 'mantis-image-classification-endpoint-configuration-v2'
+      Events:
+        Cron:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 15 * * ? *)
