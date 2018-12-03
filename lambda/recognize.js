@@ -39,36 +39,35 @@ const invokeSageMaker = async (payload) => {
   });
 };
 
+const builResponse = (statusCode, body) => {
+  return {
+    statusCode: statusCode,
+    body: body,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Credentials': true,
+    },
+  };
+};
+
 exports.handler = async (event) => {
   console.log('event', JSON.stringify(event));
   const { imageUrl } = JSON.parse(event.body);
   if (!imageUrl) {
     console.log('No imageUrl found on payload ');
-    return {
-      statusCode: 400,
-      body: 'No imageUrl key found on payload'
-    };
+    return builResponse(400, 'No imageUrl key found on payload');
   }
 
   const image = await loadImageFromUrl(imageUrl);
   if (!image) {
     console.log('Unable to download image from URL');
-    return {
-      statusCode: 400,
-      body: 'Unable to download image from URL'
-    };
+    return builResponse(400, 'Unable to download image from URL');
   }
 
   const inference = await invokeSageMaker(image);
   if (!inference) {
-    return {
-      statusCode: 500,
-      body: 'SageMaker model was not able to classify the image',
-    };
+    return builResponse(500, 'SageMaker model was not able to classify the image');
   }
 
-  return {
-    statusCode: 200,
-    body: JSON.stringify(inference),
-  };
+  return builResponse(200, JSON.stringify(inference));
 };
