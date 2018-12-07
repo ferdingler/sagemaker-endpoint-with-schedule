@@ -21,6 +21,8 @@ Resources:
       Environment:
         Variables:
           SAGE_MAKER_ENDPOINT: 'mantis-image-classification-endpoint'
+          DOCKER_ENDPOINT: 'http://ec2-54-201-97-15.us-west-2.compute.amazonaws.com/predictions/resnet'
+          # USE_SAGE_MAKER: true
       Events:
         API:
           Type: Api
