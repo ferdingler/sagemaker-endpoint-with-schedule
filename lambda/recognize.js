@@ -6,8 +6,6 @@ const AWS = AWSXRay.captureAWS(require('aws-sdk'));
 const { categories } = require('./categories');
 const sageMaker = new AWS.SageMakerRuntime();
 const sageMakerEndpoint = process.env['SAGE_MAKER_ENDPOINT'];
-const dockerEndpoint = process.env['DOCKER_ENDPOINT'];
-const useSageMaker = process.env['USE_SAGE_MAKER'] || false;
 
 
 const loadImageFromUrl = async (url) => {
@@ -43,27 +41,6 @@ const invokeSageMaker = async (payload) => {
   });
 };
 
-const invokeDocker = async (payload) => {
-  console.log('Invoking docker');
-  const inference = await axios({
-    method: 'POST',
-    url: dockerEndpoint,
-    data: payload.data,
-    responseType: 'json',
-    headers: {
-      'Content-Type': payload.headers['content-type'],
-    },
-  });
-
-  console.log('Docker response', inference.data);
-  return inference.data.map(result => {
-    return {
-      name: result.class,
-      probability: result.probability,
-    }
-  });
-};
-
 const buildResponse = (statusCode, body) => {
   return {
     statusCode: statusCode,
@@ -92,7 +69,7 @@ exports.handler = async (event) => {
   }
 
   try {
-    inference = (useSageMaker) ? await invokeSageMaker(image) : await invokeDocker(image);
+    inference = await invokeSageMaker(image);
   } catch (err) {
     console.log('Failed to run inference', err);
     return buildResponse(500, 'Failed to run inference')

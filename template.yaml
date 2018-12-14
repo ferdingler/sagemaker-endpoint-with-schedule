@@ -1,14 +1,83 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  Image Classification
+  SageMaker Image Classification
 
 Globals:
   Function:
     Runtime: nodejs8.10
     Timeout: 10
 
+Parameters:
+  ModelLocation:
+    Type: String
+    Description: S3 URL where the model.tar.gz is located
+  ModelDockerImage:
+    Type: String
+    Default: "433757028032.dkr.ecr.us-west-2.amazonaws.com/image-classification:1"
+    Description: Docker image of the SageMaker model
+
 Resources:
+  #
+  # SAGE MAKER STACK
+  #
+  SageMakerModel:
+    Type: AWS::SageMaker::Model
+    Properties:
+      ModelName: !Sub ${AWS::StackName}-model
+      ExecutionRoleArn: !GetAtt SageMakerExecutionRole.Arn
+      PrimaryContainer:
+        Image: !Ref ModelDockerImage
+        ModelDataUrl: !Ref ModelLocation
+
+  CreateEndpointConfigFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambda/
+      Handler: customResource.handler
+      Timeout: 300
+      Policies:
+        - AmazonSageMakerFullAccess
+
+  SageMakerEndpointConfig:
+    Type: Custom::SageMakerEndpointConfig
+    Properties:
+      EndpointConfigName: !Sub ${AWS::StackName}-endpoint-config
+      ServiceToken: !GetAtt CreateEndpointConfigFunction.Arn
+      InitialInstanceCount: 1
+      InstanceType: ml.m5.large
+      ModelName: !GetAtt SageMakerModel.ModelName
+      VariantName: !GetAtt SageMakerModel.ModelName
+      AcceleratorType: ml.eia1.medium
+      InitialVariantWeight: 1.0
+
+  SageMakerEndpoint:
+    Type: AWS::SageMaker::Endpoint
+    Properties:
+      EndpointConfigName:
+        !GetAtt SageMakerEndpointConfig.EndpointConfigName
+
+  SageMakerExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: "/"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        -
+          Effect: "Allow"
+          Principal:
+            Service:
+            - "sagemaker.amazonaws.com"
+          Action:
+          - "sts:AssumeRole"
+      ManagedPolicyArns:
+      - "arn:aws:iam::aws:policy/AmazonSageMakerFullAccess"
+      - "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
+
+  #
+  # LAMBDA API STACK
+  #
   RecognizeFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -20,9 +89,7 @@ Resources:
       Tracing: Active
       Environment:
         Variables:
-          SAGE_MAKER_ENDPOINT: 'mantis-image-classification-endpoint'
-          DOCKER_ENDPOINT: 'http://ec2-54-201-97-15.us-west-2.compute.amazonaws.com/predictions/resnet'
-          # USE_SAGE_MAKER: true
+          SAGE_MAKER_ENDPOINT: !GetAtt SageMakerEndpoint.EndpointName
       Events:
         API:
           Type: Api
@@ -30,6 +97,9 @@ Resources:
             Path: /recognize
             Method: post
 
+  #
+  # CRON JOB FUNCTIONS TO CONTROL SAGE MAKER SCHEDULE
+  #
   StopEndpoint:
     Type: AWS::Serverless::Function
     Properties:
@@ -40,7 +110,7 @@ Resources:
       - AmazonSageMakerFullAccess
       Environment:
         Variables:
-          SAGE_MAKER_ENDPOINT: 'mantis-image-classification-endpoint'
+          SAGE_MAKER_ENDPOINT: !GetAtt SageMakerEndpoint.EndpointName
       Events:
         Cron:
           Type: Schedule
@@ -57,8 +127,8 @@ Resources:
       - AmazonSageMakerFullAccess
       Environment:
         Variables:
-          SAGE_MAKER_ENDPOINT: 'mantis-image-classification-endpoint'
-          SAGE_MAKER_ENDPOINT_CONFIG: 'mantis-image-classification-endpoint-configuration-v2'
+          SAGE_MAKER_ENDPOINT: !GetAtt SageMakerEndpoint.EndpointName
+          SAGE_MAKER_ENDPOINT_CONFIG: !GetAtt SageMakerEndpointConfig.EndpointConfigName
       Events:
         Cron:
           Type: Schedule

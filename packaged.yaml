@@ -1,37 +1,120 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'Image Classification
+Description: 'SageMaker Image Classification
 
   '
 Globals:
   Function:
     Runtime: nodejs8.10
     Timeout: 10
+Parameters:
+  ModelDockerImage:
+    Default: 433757028032.dkr.ecr.us-west-2.amazonaws.com/image-classification:1
+    Description: Docker image of the SageMaker model
+    Type: String
+  ModelLocation:
+    Description: S3 URL where the model.tar.gz is located
+    Type: String
 Resources:
+  CreateEndpointConfigFunction:
+    Properties:
+      CodeUri: s3://fdingler-sam-artifacts/c3a8a8ae052bf3a7181f92eef2f19dc1
+      Handler: customResource.handler
+      Policies:
+      - AmazonSageMakerFullAccess
+      Timeout: 300
+    Type: AWS::Serverless::Function
   RecognizeFunction:
     Properties:
-      CodeUri: s3://fdingler-sam-artifacts/cba806a9e3e2a83a473f81fb5c7bab7c
+      CodeUri: s3://fdingler-sam-artifacts/c3a8a8ae052bf3a7181f92eef2f19dc1
       Environment:
         Variables:
-          SAGE_MAKER_ENDPOINT: mantis-image-classification-endpoint
+          SAGE_MAKER_ENDPOINT:
+            Fn::GetAtt:
+            - SageMakerEndpoint
+            - EndpointName
       Events:
         API:
           Properties:
             Method: post
             Path: /recognize
           Type: Api
-      Handler: app.handler
+      Handler: recognize.handler
       Policies:
       - AmazonSageMakerFullAccess
       - AWSXrayFullAccess
       Tracing: Active
     Type: AWS::Serverless::Function
+  SageMakerEndpoint:
+    Properties:
+      EndpointConfigName:
+        Fn::GetAtt:
+        - SageMakerEndpointConfig
+        - EndpointConfigName
+    Type: AWS::SageMaker::Endpoint
+  SageMakerEndpointConfig:
+    Properties:
+      AcceleratorType: ml.eia1.medium
+      EndpointConfigName:
+        Fn::Sub: ${AWS::StackName}-endpoint-config
+      InitialInstanceCount: 1
+      InitialVariantWeight: 1.0
+      InstanceType: ml.m5.large
+      ModelName:
+        Fn::GetAtt:
+        - SageMakerModel
+        - ModelName
+      ServiceToken:
+        Fn::GetAtt:
+        - CreateEndpointConfigFunction
+        - Arn
+      VariantName:
+        Fn::GetAtt:
+        - SageMakerModel
+        - ModelName
+    Type: Custom::SageMakerEndpointConfig
+  SageMakerExecutionRole:
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action:
+          - sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service:
+            - sagemaker.amazonaws.com
+        Version: '2012-10-17'
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/AmazonSageMakerFullAccess
+      - arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+      Path: /
+    Type: AWS::IAM::Role
+  SageMakerModel:
+    Properties:
+      ExecutionRoleArn:
+        Fn::GetAtt:
+        - SageMakerExecutionRole
+        - Arn
+      ModelName:
+        Fn::Sub: ${AWS::StackName}-model
+      PrimaryContainer:
+        Image:
+          Ref: ModelDockerImage
+        ModelDataUrl:
+          Ref: ModelLocation
+    Type: AWS::SageMaker::Model
   StartEndpoint:
     Properties:
-      CodeUri: s3://fdingler-sam-artifacts/cba806a9e3e2a83a473f81fb5c7bab7c
+      CodeUri: s3://fdingler-sam-artifacts/c3a8a8ae052bf3a7181f92eef2f19dc1
       Environment:
         Variables:
-          SAGE_MAKER_ENDPOINT: mantis-image-classification-endpoint
-          SAGE_MAKER_ENDPOINT_CONFIG: mantis-image-classification-endpoint-configuration-v2
+          SAGE_MAKER_ENDPOINT:
+            Fn::GetAtt:
+            - SageMakerEndpoint
+            - EndpointName
+          SAGE_MAKER_ENDPOINT_CONFIG:
+            Fn::GetAtt:
+            - SageMakerEndpointConfig
+            - EndpointConfigName
       Events:
         Cron:
           Properties:
@@ -44,10 +127,13 @@ Resources:
     Type: AWS::Serverless::Function
   StopEndpoint:
     Properties:
-      CodeUri: s3://fdingler-sam-artifacts/cba806a9e3e2a83a473f81fb5c7bab7c
+      CodeUri: s3://fdingler-sam-artifacts/c3a8a8ae052bf3a7181f92eef2f19dc1
       Environment:
         Variables:
-          SAGE_MAKER_ENDPOINT: mantis-image-classification-endpoint
+          SAGE_MAKER_ENDPOINT:
+            Fn::GetAtt:
+            - SageMakerEndpoint
+            - EndpointName
       Events:
         Cron:
           Properties:
