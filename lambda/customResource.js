@@ -78,13 +78,13 @@ exports.handler = async (event, context) => {
 
   try {
     if (RequestType === 'Delete') {
-      const result = await deleteEndpointConfig(event);
-      return sendResponse(event, context, "SUCCESS", result);
+      await deleteEndpointConfig(event);
+      return sendResponse(event, context, "SUCCESS");
     }
 
     if (RequestType === 'Create') {
       const result = await createEndpointConfig(event);
-      return sendResponse(event, context, "SUCCESS", result);
+      return sendResponse(event, context, "SUCCESS", { Id: result.EndpointConfigArn });
     }
   } catch(err) {
     return sendResponse(event, context, "FAILED");
