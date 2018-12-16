@@ -1,4 +1,6 @@
 const AWS = require('aws-sdk');
+const https = require('https');
+const url = require('url');
 const SageMaker = new AWS.SageMaker();
 
 const createEndpointConfig = async (event) => {
@@ -31,17 +33,62 @@ const deleteEndpointConfig = async (event) => {
   }).promise;
 };
 
-exports.handler = async (event) => {
+const sendResponse = async (event, context, status, physicalResourceId, err, data) => {
+  const json = JSON.stringify({
+    StackId: event.StackId,
+    RequestId: event.RequestId,
+    LogicalResourceId: event.LogicalResourceId,
+    PhysicalResourceId: physicalResourceId || context.logStreamName,
+    Status: status,
+    Reason: "See details in CloudWatch Log: " + context.logStreamName,
+    Data: data || { 'Message': status }
+  });
+
+  console.log("RESPONSE: ", json);
+  const parsedUrl = url.parse(event.ResponseURL);
+  const options = {
+    hostname: parsedUrl.hostname,
+    port: 443,
+    path: parsedUrl.path,
+    method: "PUT",
+    headers: {
+      "content-type": "",
+      "content-length": json.length
+    }
+  };
+
+  const request = https.request(options, response => {
+    console.log("STATUS: " + response.statusCode);
+    console.log("HEADERS: " + JSON.stringify(response.headers));
+    context.done();
+  });
+
+  request.on("error", error => {
+    console.log("sendResponse rrror: ", error);
+    context.done();
+  });
+
+  request.write(json);
+  request.end();
+};
+
+exports.handler = async (event, context) => {
   console.log('event', JSON.stringify(event));
   const { RequestType } = event;
-  if (RequestType === 'Update') {
-    // Need to handle how to update endpoint config
-    return true;
+
+  try {
+    if (RequestType === 'Delete') {
+      const result = await deleteEndpointConfig(event);
+      return sendResponse(event, context, "SUCCESS", result);
+    }
+
+    if (RequestType === 'Create') {
+      const result = await createEndpointConfig(event);
+      return sendResponse(event, context, "SUCCESS", result);
+    }
+  } catch(err) {
+    return sendResponse(event, context, "FAILED");
   }
 
-  if (RequestType === 'Delete') {
-    return deleteEndpointConfig(event);
-  }
-
-  return createEndpointConfig(event);
+  return sendResponse(event, context, "SUCCESS");
 };
